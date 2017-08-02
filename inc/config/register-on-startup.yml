@@ -1,0 +1,23 @@
+parameters:
+services:
+  manager.register:
+    class: Smartling\StartupRegisterManager
+    calls:
+      #- [ "addService", [ @custom.scheduler.interval.helper ]]
+      - [ "addService", [ "@cron.worker.upload" ]]
+      - [ "addService", [ "@cron.worker.submission-collector" ]]
+      - [ "addService", [ "@cron.worker.last-modified-check" ]]
+      - [ "addService", [ "@cron.worker.download" ]]
+      - [ "addService", [ "@wp.i18n" ]]
+      - [ "addService", [ "@wp.checkStatus" ]]
+      - [ "addService", [ "@wp.submissions" ]]
+      - [ "addService", [ "@wp.bulkSubmit" ]]
+      - [ "addService", [ "@wp.settings" ]]
+      - [ "addService", [ "@wp.settings.edit" ]]
+      - [ "addService", [ "@smartling.helper.relative-image-path-support" ]]
+      - [ "addService", [ "@smartling.helper.absolute-image-path-support" ]]
+      - [ "addService", [ "@service.submission-cleanup" ]]
+      - [ "addService", [ "@helper.shortcode" ]]
+      - [ "addService", [ "@meta-field.processor.manager" ]]
+      - [ "addService", [ "@service.side-removal-handler"]]
+      - [ "addService", [ "@service.invalid-character-cleaner" ]]

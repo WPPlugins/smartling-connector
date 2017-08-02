@@ -1,0 +1,11 @@
+parameters:
+  config.files:
+    - "services.yml"
+    - "serializer.yml"
+    - "cron.yml"
+    - "plugin-info.yml"
+    - "logger.yml"
+    - "field-processor.yml"
+    - "migrations.yml"
+    - "installable.yml"
+    - "register-on-startup.yml"

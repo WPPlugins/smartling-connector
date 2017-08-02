@@ -1,0 +1,268 @@
+parameters:
+  multilang_plugins:
+    "multilingual-press-pro": false
+
+  submission.pagesize: 20
+services:
+  content-type-descriptor-manager:
+    class: Smartling\ContentTypes\ContentTypeManager
+    arguments:
+      - "@logger"
+
+
+  smartling.helper.relative-image-path-support:
+    class: Smartling\Helpers\RelativeLinkedAttachmentCoreHelper
+    arguments:
+      - "@logger"
+      - "@entrypoint"
+
+  smartling.helper.absolute-image-path-support:
+      class: Smartling\Helpers\AbsoluteLinkedAttachmentCoreHelper
+      arguments:
+        - "@logger"
+        - "@entrypoint"
+
+  helper.customMenu:
+    class: Smartling\Helpers\CustomMenuContentTypeHelper
+    calls:
+      - [ "setLogger", [ "@logger" ] ]
+      - [ "setSiteHelper", [ "@site.helper" ] ]
+      - [ "setContentIoFactory", [ "@factory.contentIO" ] ]
+
+  wrapper.sdk.api.smartling:
+    class: Smartling\ApiWrapper
+    arguments:
+      - "@manager.settings"
+      - "@logger"
+      - "%plugin.name%"
+      - "%plugin.version%"
+  queue.db:
+    class: Smartling\Queue\Queue
+    arguments:
+      - "@logger"
+    calls:
+      - ["setDbal", ["@site.db"]]
+
+
+  entrypoint:
+    class: Smartling\Base\SmartlingCore
+    calls:
+      - [ "setLogger", [ "@logger" ]]
+      - [ "setSubmissionManager", [ "@manager.submission" ]]
+      - [ "setSiteHelper", [ "@site.helper" ]]
+      - [ "setApiWrapper", [ "@wrapper.sdk.api.smartling" ]]
+      - [ "setMultilangProxy", [ "@multilang.proxy" ]]
+      - [ "setContentIoFactory", [ "@factory.contentIO" ]]
+      - [ "setCache", [ "@site.cache" ]]
+      - [ "setCustomMenuHelper", [ "@helper.customMenu" ]]
+      - [ "setSettingsManager", [ "@manager.settings" ]]
+      - [ "setQueue", ["@queue.db"]]
+      - [ "setContentHelper", [ "@content.helper" ]]
+      - [ "setTranslationHelper", [ "@translation.helper" ]]
+      - [ "setFieldsFilter", [ "@fields-filter.helper" ] ]
+      - [ "setContentSerializationHelper", [ "@content-serialization.helper" ] ]
+
+
+  factory.contentIO:
+    class: Smartling\Processors\ContentEntitiesIOFactory
+    arguments:
+      - "@logger"
+
+  manager.submission:
+    class: Smartling\Submissions\SubmissionManager
+    arguments:
+     - "@logger"
+     - "@site.db"
+     - "%submission.pagesize%"
+     - "@entity.helper"
+
+  site.helper:
+    class: Smartling\Helpers\SiteHelper
+    arguments:
+      - "@logger"
+
+  detect-changes.helper:
+    class: Smartling\Helpers\DetectChangesHelper
+    calls:
+      - [ "setLogger" , [ "@logger" ] ]
+      - [ "setSettingsManager" , [ "@manager.settings" ] ]
+      - [ "setSubmissionManager" , [ "@manager.submission" ] ]
+      - [ "setContentSerializationHelper" , [ "@content-serialization.helper" ] ]
+
+  site.db:
+    class: Smartling\DbAl\DB
+    arguments:
+      - "@logger"
+      - "%logger.smartling_log_raw_sql%"
+
+  site.cache:
+    class: Smartling\Helpers\Cache
+
+  manager.settings:
+    class: Smartling\Settings\SettingsManager
+    arguments:
+      - "@logger"
+      - "@site.db"
+      - "%submission.pagesize%"
+      - "@site.helper"
+      - "@multilang.proxy"
+
+  plugin.info:
+      class: Smartling\Helpers\PluginInfo
+      arguments:
+        - "%plugin.name%"
+        - "%plugin.version%"
+        - "%plugin.url%"
+        - "%plugin.dir%"
+        - "%plugin.domain%"
+        - "@manager.settings"
+        - "%plugin.upload%"
+
+  multilang.proxy:
+    class: Smartling\DbAl\MultiligualPressConnector
+    arguments:
+      - "@logger"
+      - "@site.helper"
+      - "%multilang_plugins%"
+
+  entity.helper:
+    class: Smartling\Helpers\EntityHelper
+    calls:
+      - [ "setLogger", [ "@logger" ]]
+      - [ "setPluginInfo", [ "@plugin.info" ]]
+      - [ "setConnector", [ "@multilang.proxy" ]]
+      - [ "setSiteHelper", [ "@site.helper" ]]
+
+  wp.i18n:
+    class: Smartling\WP\i18n
+    arguments:
+      - "@plugin.info"
+
+  wp.settings:
+    class: Smartling\WP\Controller\ConfigurationProfilesController
+    arguments:
+      - "@logger"
+      - "@multilang.proxy"
+      - "@plugin.info"
+      - "@entity.helper"
+      - "@manager.submission"
+      - "@site.cache"
+    calls:
+      - [ "setQueue", [ "@queue.db" ]]
+
+  wp.settings.edit:
+    class: Smartling\WP\Controller\ConfigurationProfileFormController
+    arguments:
+      - "@logger"
+      - "@multilang.proxy"
+      - "@plugin.info"
+      - "@entity.helper"
+      - "@manager.submission"
+      - "@site.cache"
+
+  wp.submissions:
+    class: Smartling\WP\Controller\SubmissionsPageController
+    arguments:
+      - "@logger"
+      - "@multilang.proxy"
+      - "@plugin.info"
+      - "@entity.helper"
+      - "@manager.submission"
+      - "@site.cache"
+    calls:
+      - [ "setQueue", [ "@queue.db" ] ]
+
+  wp.checkStatus:
+      class: Smartling\WP\Controller\CheckStatusController
+      arguments:
+        - "@logger"
+        - "@multilang.proxy"
+        - "@plugin.info"
+        - "@entity.helper"
+        - "@manager.submission"
+        - "@site.cache"
+
+  service.submission-cleanup:
+    class: Smartling\Helpers\SubmissionCleanupHelper
+    calls:
+      - [ "setApiWrapper", [ "@wrapper.sdk.api.smartling" ] ]
+      - [ "setLogger", [ "@logger" ] ]
+      - [ "setSiteHelper" , [ "@site.helper" ] ]
+      - [ "setSubmissionManager", [ "@manager.submission" ] ]
+      - [ "setIoWrapper", [ "@factory.contentIO" ] ]
+      - [ "setMultilangProxy", [ "@multilang.proxy" ]]
+
+  wp.bulkSubmit:
+    class: Smartling\WP\Controller\BulkSubmitController
+    arguments:
+      - "@logger"
+      - "@multilang.proxy"
+      - "@plugin.info"
+      - "@entity.helper"
+      - "@manager.submission"
+      - "@site.cache"
+
+  helper.shortcode:
+    class: Smartling\Helpers\ShortcodeHelper
+    arguments:
+      - "@logger"
+    calls:
+      - [ "setFieldsFilter", [ "@fields-filter.helper" ]]
+
+  default.meta-field-processor:
+    class: Smartling\Helpers\MetaFieldProcessor\DefaultMetaFieldProcessor
+
+  meta-field.processor.manager:
+    class: Smartling\Helpers\MetaFieldProcessor\MetaFieldProcessorManager
+    arguments:
+      - "@logger"
+    calls:
+      - [ "setDefaultHandler", [ "@default.meta-field-processor" ] ]
+
+  service.side-removal-handler:
+    class: Smartling\Services\BlogRemovalHandler
+    calls:
+      - [ "setApiWrapper", [ "@wrapper.sdk.api.smartling" ] ]
+      - [ "setLogger", [ "@logger" ] ]
+      - [ "setSubmissionManager", [ "@manager.submission" ] ]
+
+  service.invalid-character-cleaner:
+    class: Smartling\Services\InvalidCharacterCleaner
+
+  extension.translation_lock:
+    class: Smartling\Extensions\TranslateLock
+
+  extension.loader:
+    class: Smartling\Extensions\ExtensionLoader
+    arguments:
+      - "@logger"
+    calls:
+      - [ "registerExtension", [ "@extension.translation_lock" ]]
+
+  translation.helper:
+    class: Smartling\Helpers\TranslationHelper
+    calls:
+      - [ "setMutilangProxy", [ "@multilang.proxy" ]]
+      - [ "setSubmissionManager", [ "@manager.submission" ]]
+      - [ "setLogger", [ "@logger" ]]
+
+  content.helper:
+    class: Smartling\Helpers\ContentHelper
+    arguments:
+      - "@logger"
+    calls:
+      - [ "setIoFactory", [ "@factory.contentIO" ]]
+      - [ "setSiteHelper", [ "@site.helper" ]]
+
+  fields-filter.helper:
+    class: Smartling\Helpers\FieldsFilterHelper
+    arguments:
+      - "@logger"
+      - "@manager.settings"
+
+  content-serialization.helper:
+    class: Smartling\Helpers\ContentSerializationHelper
+    arguments:
+    - "@logger"
+    - "@content.helper"
+    - "@fields-filter.helper"
